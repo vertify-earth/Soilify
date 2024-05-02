@@ -8,6 +8,10 @@ print(points.size())
 
 var india = ee.FeatureCollection('FAO/GAUL/2015/level0').filter(
     ee.Filter.eq('ADM0_NAME', 'India'))
+
+
+
+
     
 points = points.filterBounds(india)
 
@@ -187,10 +191,38 @@ var modis250 = ee.ImageCollection('MODIS/061/MOD09GQ')
 var modis500 = ee.ImageCollection('MODIS/061/MCD43A4')
                   .select("Nadir.*")
                   .filterBounds(points)
-var l8= ee.ImageCollection('LANDSAT/LC08/C02/T1_TOA')
+                  
+                  
+                  
+// var l8= ee.ImageCollection('LANDSAT/LC08/C02/T1_TOA')
+//     .filterBounds(points)
+//     .filter(ee.Filter.lt('CLOUD_COVER', 5))
+//     .select('B.*')        
+    
+
+
+var dataset = ee.ImageCollection('LANDSAT/LC08/C02/T1_L2')
     .filterBounds(points)
+    
+    
+// Applies scaling factors.
+function applyScaleFactors(image) {
+  var opticalBands = image.select('SR_B.').multiply(0.0000275).add(-0.2);
+  
+  return image.addBands(opticalBands, null, true)
+}
+
+dataset = dataset.map(applyScaleFactors);
+var l8 = dataset
     .filter(ee.Filter.lt('CLOUD_COVER', 5))
-    .select('B.*')         
+    .select('SR_B.*')     
+    
+// var l8 = ee.ImageCollection('LANDSAT/LC08/C02/T1_L2')
+//     .filterBounds(points)
+//     .filter(ee.Filter.lt('CLOUD_COVER', 1))
+//     .select('SR_B.*') 
+    
+    
     
 
 // Load a precipitation image
@@ -309,9 +341,36 @@ function get_training(config) {
                   });                    
   
   image = image.addBands([latlon, precip, temp,  asp, hills]);
+  
+  
+  ///*** selection for modis
+//   image = image.select([
+//     'sur_refl_b01',
+//     'sur_refl_b02',
+//     'longitude',
+//     // Skip 'latitude'
+//     //'latitude',
+//     'hourlyPrecipRate',
+//     'LST_Day_1km_p25',
+//     'LST_Day_1km_p50',
+//     'LST_Day_1km_p75',
+//     'aspect',
+//     'hillshade'
+// ]);
+  
+  
+///** selection for landsat
+
+// image = image.select([
+//     'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B9', 'B10', 
+//     'B11', 'longitude', 'hourlyPrecipRate', 
+//     'LST_Day_1km_p25', 'LST_Day_1km_p50', 'LST_Day_1km_p75', 
+//     'aspect', 'hillshade'
+// ]);
+
   var training_data = image.sampleRegions({
     'collection': points,
-    'properties': ['oc', 'longitude', 'latitude'],
+    'properties': ['oc', 'latitude', 'longitude'],
     'scale': res,
     'tileScale': 16
   })
@@ -342,32 +401,56 @@ var resolutions = {
   's2': 250
 };
 
-// Create configurations for all datasets and points
-var modis250Configs = [
-  { dataset: datasets.modis250, points: icraf_21, id: 'icraf_21modis250', startDate: '2021-05-01', endDate: '2021-06-30', res: resolutions.modis250 },
-  //{ dataset: datasets.modis250, points: icraf_23, id: 'icraf_23modis250', startDate: '2023-05-01', endDate: '2023-06-30', res: resolutions.modis250 },
-  { dataset: datasets.modis250, points: cimmyt_18, id: 'cimmyt_18modis250', startDate: '2018-05-01', endDate: '2018-06-30', res: resolutions.modis250 },
-  //{ dataset: datasets.modis250, points: cimmyt_19, id: 'cimmyt_19modis250', startDate: '2019-05-01', endDate: '2019-06-30', res: resolutions.modis250 },
-  //{ dataset: datasets.modis250, points: cimmyt_20, id: 'cimmyt_20modis250', startDate: '2020-05-01', endDate: '2020-06-30', res: resolutions.modis250 },
-  { dataset: datasets.modis250, points: wrms_hr, id: 'wrms_hrmodis250', startDate: '2020-05-01', endDate: '2020-06-30', res: resolutions.modis250 },
-  { dataset: datasets.modis250, points: wrms_tel, id: 'wrms_telmodis250', startDate: '2023-05-01', endDate: '2023-06-30', res: resolutions.modis250 },
-  //{ dataset: datasets.modis250, points: biaf, id: 'biafmodis250', startDate: '2020-05-01', endDate: '2020-06-30', res: resolutions.modis250 },
-  { dataset: datasets.modis250, points: fes, id: 'fesmodis250', startDate: '2020-05-01', endDate: '2020-06-30', res: resolutions.modis250 },
-];
 
+///***********//
 
+//used for three districts
 
-// var l8Configs = [
-//   { dataset: datasets.l8, points: icraf_21, id: 'icraf_21l8', startDate: '2021-05-01', endDate: '2021-06-30', res: resolutions.l8 },
-//   { dataset: datasets.l8, points: icraf_23, id: 'icraf_23l8', startDate: '2023-05-01', endDate: '2023-06-30', res: resolutions.l8 },
-//   { dataset: datasets.l8, points: cimmyt_18, id: 'cimmyt_18l8', startDate: '2018-05-01', endDate: '2018-06-30', res: resolutions.l8 },
-//   { dataset: datasets.l8, points: cimmyt_19, id: 'cimmyt_19l8', startDate: '2019-05-01', endDate: '2019-06-30', res: resolutions.l8 },
-//   { dataset: datasets.l8, points: cimmyt_20, id: 'cimmyt_20l8', startDate: '2020-05-01', endDate: '2020-06-30', res: resolutions.l8 },
-//   { dataset: datasets.l8, points: wrms_hr, id: 'wrms_hrl8', startDate: '2020-05-01', endDate: '2020-06-30', res: resolutions.l8 },
-//   { dataset: datasets.l8, points: wrms_tel, id: 'wrms_tell8', startDate: '2023-05-01', endDate: '2023-06-30', res: resolutions.l8 },
-//   { dataset: datasets.l8, points: biaf, id: 'biafl8', startDate: '2020-05-01', endDate: '2020-06-30', res: resolutions.l8 },
-//   { dataset: datasets.l8, points: fes, id: 'fesl8', startDate: '2020-05-01', endDate: '2020-06-30', res: resolutions.l8 },
+// var modis250Configs = [
+//   { dataset: datasets.modis250, points: icraf_21, id: 'icraf_21modis250', startDate: '2021-05-01', endDate: '2021-06-30', res: resolutions.modis250 },
+//   { dataset: datasets.modis250, points: icraf_23, id: 'icraf_23modis250', startDate: '2023-05-01', endDate: '2023-06-30', res: resolutions.modis250 },
+//   { dataset: datasets.modis250, points: cimmyt_18, id: 'cimmyt_18modis250', startDate: '2018-05-01', endDate: '2018-06-30', res: resolutions.modis250 },
+//   { dataset: datasets.modis250, points: cimmyt_19, id: 'cimmyt_19modis250', startDate: '2019-05-01', endDate: '2019-06-30', res: resolutions.modis250 },
+//   { dataset: datasets.modis250, points: cimmyt_20, id: 'cimmyt_20modis250', startDate: '2020-05-01', endDate: '2020-06-30', res: resolutions.modis250 },
+//   { dataset: datasets.modis250, points: wrms_hr, id: 'wrms_hrmodis250', startDate: '2020-05-01', endDate: '2020-06-30', res: resolutions.modis250 },
+//   { dataset: datasets.modis250, points: wrms_tel, id: 'wrms_telmodis250', startDate: '2023-05-01', endDate: '2023-06-30', res: resolutions.modis250 },
+//   { dataset: datasets.modis250, points: biaf, id: 'biafmodis250', startDate: '2020-05-01', endDate: '2020-06-30', res: resolutions.modis250 },
+//   { dataset: datasets.modis250, points: fes, id: 'fesmodis250', startDate: '2020-05-01', endDate: '2020-06-30', res: resolutions.modis250 },
 // ];
+
+
+////*************//
+
+
+
+////*************/////
+// used for highest accuracy medak
+// Create configurations for all datasets and points
+// var modis250Configs = [
+//   { dataset: datasets.modis250, points: icraf_21, id: 'icraf_21modis250', startDate: '2021-05-01', endDate: '2021-06-30', res: resolutions.modis250 },
+//   //{ dataset: datasets.modis250, points: icraf_23, id: 'icraf_23modis250', startDate: '2023-05-01', endDate: '2023-06-30', res: resolutions.modis250 },
+//   { dataset: datasets.modis250, points: cimmyt_18, id: 'cimmyt_18modis250', startDate: '2018-05-01', endDate: '2018-06-30', res: resolutions.modis250 },
+//   //{ dataset: datasets.modis250, points: cimmyt_19, id: 'cimmyt_19modis250', startDate: '2019-05-01', endDate: '2019-06-30', res: resolutions.modis250 },
+//   //{ dataset: datasets.modis250, points: cimmyt_20, id: 'cimmyt_20modis250', startDate: '2020-05-01', endDate: '2020-06-30', res: resolutions.modis250 },
+//   { dataset: datasets.modis250, points: wrms_hr, id: 'wrms_hrmodis250', startDate: '2020-05-01', endDate: '2020-06-30', res: resolutions.modis250 },
+//   { dataset: datasets.modis250, points: wrms_tel, id: 'wrms_telmodis250', startDate: '2023-05-01', endDate: '2023-06-30', res: resolutions.modis250 },
+//   //{ dataset: datasets.modis250, points: biaf, id: 'biafmodis250', startDate: '2020-05-01', endDate: '2020-06-30', res: resolutions.modis250 },
+//   { dataset: datasets.modis250, points: fes, id: 'fesmodis250', startDate: '2020-05-01', endDate: '2020-06-30', res: resolutions.modis250 },
+// ];
+
+////*************/////
+
+var l8Configs = [
+  { dataset: datasets.l8, points: icraf_21, id: 'icraf_21l8', startDate: '2021-05-01', endDate: '2021-06-30', res: resolutions.l8 },
+{ dataset: datasets.l8, points: icraf_23, id: 'icraf_23l8', startDate: '2023-05-01', endDate: '2023-06-30', res: resolutions.l8 },
+  { dataset: datasets.l8, points: cimmyt_18, id: 'cimmyt_18l8', startDate: '2018-05-01', endDate: '2018-06-30', res: resolutions.l8 },
+  //{ dataset: datasets.l8, points: cimmyt_19, id: 'cimmyt_19l8', startDate: '2019-05-01', endDate: '2019-06-30', res: resolutions.l8 },
+  //{ dataset: datasets.l8, points: cimmyt_20, id: 'cimmyt_20l8', startDate: '2020-05-01', endDate: '2020-06-30', res: resolutions.l8 },
+  { dataset: datasets.l8, points: wrms_hr, id: 'wrms_hrl8', startDate: '2020-05-01', endDate: '2020-06-30', res: resolutions.l8 },
+  { dataset: datasets.l8, points: wrms_tel, id: 'wrms_tell8', startDate: '2023-05-01', endDate: '2023-06-30', res: resolutions.l8 },
+  //{ dataset: datasets.l8, points: biaf, id: 'biafl8', startDate: '2020-05-01', endDate: '2020-06-30', res: resolutions.l8 },
+  { dataset: datasets.l8, points: fes, id: 'fesl8', startDate: '2020-05-01', endDate: '2020-06-30', res: resolutions.l8 },
+];
 
 // var modis500Configs = [
 //   { dataset: datasets.modis500, points: icraf_21, id: 'icraf_21modis500', startDate: '2021-05-01', endDate: '2021-06-30', res: resolutions.modis500 },
@@ -420,9 +503,9 @@ var modis250Configs = [
 // Combine all configurations into a single list called 'configs'
 
 var configs = [
-  modis250Configs,
+  //modis250Configs,
   //modis500Configs,
-  //l8Configs,
+  l8Configs,
   //s2Configs,
   //s3Configs
 ];
@@ -522,7 +605,7 @@ var output = result.classify(RF_regressor)
 
 print(output.size())
 
-//print(image.bandNames())
+print(image.bandNames())
 
 // Get the R^2 value
 var r2 = test.select(['classification', 'oc'])
@@ -537,13 +620,23 @@ print('R^2 all :', ee.Number(r2).pow(2));
 }
 
 
+var observationValidation = ee.Array(test.aggregate_array('oc'));
+var predictionValidation = ee.Array(test.aggregate_array('classification'));
+// Compute residuals
+var residualsValidation = observationValidation.subtract(predictionValidation);
+// Compute RMSE with equation, print it
+var rmse = residualsValidation.pow(2).reduce('mean', [0]).sqrt();
+var rmse = rmse.get([0])
+print(rmse)
+
+
 
 //print(finalResult.size())
 
 //Print or use dataList, r2List, rmseList as needed
-print("Data List: ", dataList);
-print("R^2 List: ", r2List);
-print("RMSE List: ", rmseList);
+// print("Data List: ", dataList);
+// print("R^2 List: ", r2List);
+// print("RMSE List: ", rmseList);
 
 
 
@@ -763,19 +856,43 @@ print("RMSE List: ", rmseList);
 
 // call the telengana shapefile
 
-var tel = ee.FeatureCollection('projects/fire-ashoka/assets/telengana_districts');
+//var tel = ee.FeatureCollection('projects/fire-ashoka/assets/telengana_districts');
+
+var sub = ee.FeatureCollection('FAO/GAUL/2015/level2')
+                .filter(ee.Filter.eq('ADM0_NAME', 'India'))
+                .filter(ee.Filter.inList('ADM2_NAME', ['Bolangir', 'Medak', 'Yavatmal']))
+
+
 
 ///var tel = tel.filter(ee.Filter.eq('New_Dist_4', 'Medak'))
-var startDate = '2022-04-01';
-var endDate = '2022-05-30';
+var startDate = '2023-04-01';
+var endDate = '2023-06-15';
 
-var image = ee.ImageCollection('MODIS/061/MOD09GQ')
-                  .filterDate(startDate, endDate)
-                  .filterBounds(tel)
-                  .select("sur.*")
-                  .median()
-                  .clip(tel);
-                  
+// var image = ee.ImageCollection('MODIS/061/MOD09GQ')
+//                   .filterDate(startDate, endDate)
+//                   .filterBounds(sub)
+//                   .select("sur.*")
+//                   .median()
+//                   .clip(sub);
+var dataset = ee.ImageCollection('LANDSAT/LC08/C02/T1_L2')
+    //.filterBounds(points)
+    .filterDate(startDate, endDate)
+    .filterBounds(sub)
+    
+    
+// Applies scaling factors.
+function applyScaleFactors(image) {
+  var opticalBands = image.select('SR_B.').multiply(0.0000275).add(-0.2);
+  
+  return image.addBands(opticalBands, null, true)
+}
+
+dataset = dataset.map(applyScaleFactors);
+var image = dataset
+    .filter(ee.Filter.lt('CLOUD_COVER', 5))
+    .select('SR_B.*')
+    .median()
+    .clip(sub);
                   
                   
                   
@@ -785,7 +902,7 @@ var latlon = ee.Image.pixelLonLat();
 
 // get other bands
 
-var res = 250
+var res = 30
 
 var precip = precipitation.filterDate( '2021-01-01', '2022-05-01').mean()
                 .resample('bilinear')
@@ -815,24 +932,48 @@ var hills = hillshade
 
 image = image.addBands([latlon, precip, temp,  asp, hills]);
 
+// remove longitude
+// image = image.select([
+//     'sur_refl_b01',
+//     'sur_refl_b02',
+//     'longitude',
+//     //'latitude',
+//     // Skip 'latitude'
+//     'hourlyPrecipRate',
+//     'LST_Day_1km_p25',
+//     'LST_Day_1km_p50',
+//     'LST_Day_1km_p75',
+//     'aspect',
+//     'hillshade'
+// ]);
+
+
 print(image.bandNames())
 
 
-var falseColorVis = {
-  min: -100.0,
-  max: 8000.0,
-  bands: ['sur_refl_b02', 'sur_refl_b02', 'sur_refl_b01'],
-};           
+// var falseColorVis = {
+//   min: -100.0,
+//   max: 8000.0,
+//   bands: ['sur_refl_b02', 'sur_refl_b02', 'sur_refl_b01'],
+// };           
            
 //var dataset = get_training(modis250_tel)  
 
 
-Map.addLayer(image,falseColorVis, 'image' )                  
+var visualisation = {
+  bands: ['SR_B4', 'SR_B3', 'SR_B2'],
+  min: 0.0,
+  max: 0.3,
+};
+
+
+
+Map.addLayer(image,visualisation, 'image' )                  
 var classified = image.classify(RF_regressor);    
 
 //print(classified21)
 
-//Map.addLayer(classified,{min: .33, max: 1.05}, 'classified')
+Map.addLayer(classified,{min: .33, max: 1.05}, 'classified')
                   
 
 
@@ -846,12 +987,31 @@ var classified = image.classify(RF_regressor);
 //   maxPixels: 1e10
 // });
 
-Export.image.toAsset({
- image: classified,
-  description: 'soc_modis_telangana_22',
-  scale: 250,
-  assetId: 'soc_modis_telangana_22',
-  region: tel,
-  
+
+// for geo in ['Bolangir', 'Medak', 'Yavatmal']
+
+//   region = sub.e.Filter.eq('ADM2_NAME', geo)
+
+//   Export.image.toAsset({
+//   image: classified,
+//     description: 'soc_l8_{geo}_22',
+//     scale: 30,
+//     assetId: 'soc_l8_{geo}_22',
+//     region: region,
+    
+//   });
+var geos = ['Bolangir', 'Medak', 'Yavatmal'];
+
+geos.forEach(function(geo) {
+  var region = sub.filter(ee.Filter.eq('ADM2_NAME', geo));
+
+  Export.image.toAsset({
+    image: classified,
+    description: 'soc_l8_' + geo + '_23',
+    scale: 30,
+    assetId: 'soc_l8_' + geo + '_23',
+    region: region.geometry(),
+    maxPixels: 1e10
+  });
 });
 
