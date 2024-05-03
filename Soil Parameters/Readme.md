@@ -1,6 +1,6 @@
-#The scripts here for ML based soil parameters monitoring.
+# The scripts here for ML based soil parameters monitoring.
 
-##Scripts:
+## Scripts:
 
 Soil salinity classification using ML.
 
